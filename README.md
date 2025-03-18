@@ -14,7 +14,7 @@ a project that uses a local whisper/ai model to generate subtitles for videos.
 **tqdm** for fancy progress bars, falls back to a file counter if not installed.
 
 # Limitations:
-**I am not a programmer,** just a hobbiyst/tinkerer. When it comes to python, I am a novice, probably even less than. This script relied heavily on google/chatgpt/hope to come into existence. But I had a need and this filled it,
+**I am not a programmer,** just a hobbyst/tinkerer. When it comes to python, I am a novice, probably even less than. This script relied heavily on google/chatgpt/hope to come into existence. But I had a need and this filled it,
 so I put it here in case it can help someone else. 
 
 **BLOAT:** As I am also using this as a learning exercise, this script conatins way more than it actually needs. The testing I did revealed many pitfalls that I tried to mitigate through checks and sanitizing of paths. As a result the script seems overly complicated for what it does. 

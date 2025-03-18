@@ -7,7 +7,7 @@ import sys
 import datetime
 import argparse
 
-__version__ = "0.0.22"
+__version__ = "0.0.23"
 
 # Set up argument parser
 parser = argparse.ArgumentParser(
@@ -27,11 +27,31 @@ parser = argparse.ArgumentParser(
     ),
     formatter_class=argparse.RawTextHelpFormatter  # Ensures newlines are preserved
 )
+# Required arguments
 parser.add_argument("source_directory", type=str, help="Path to the source directory")
+# Optional aruguments
 parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+
+# Define export options separately
+export_options = [
+    ("-r", "--reverse", "Also export a list of video files that have subtitles or embedded subtitles, if any."),
+    ("-a", "--all-videos", "Also export a list of all video files found, if any."),
+    ("-s", "--all-subtitles", "Also export a list of all subtitle files found, if any."),
+    ("-m", "--all-embedded", "Also export a list of all videos with embedded subtitles."),
+    ("-e", "--everything", "Enable all export options."),
+]
+
+# Add options to the parser
+for short, long, desc in export_options:
+    parser.add_argument(short, long, action="store_true", help=desc)
 
 # Parse arguments
 args = parser.parse_args()
+
+# If --everything is enabled, enable all other export options
+if args.everything:
+    for short, long, _ in export_options[:-1]:  # Exclude "--everything" itself
+        vars(args)[long.lstrip("--").replace("-", "_")] = True  # Safer way to modify argparse namespace
 
 # Normalize and clean the directory path
 source_dir = os.path.abspath(args.source_directory.strip())
@@ -158,21 +178,41 @@ for i, vid in enumerate(video_iterator, start=1):
 print("\nFiltering complete.")
 print(f"Total Videos Without Subtitles: {len(videos_without_subtitles)}")
 
-if videos_without_subtitles:
+def export_file(file_list, prefix, source_dir):
+    """Exports a list of files to a timestamped text file if the list is not empty."""
+    if not file_list:
+        print(f"{prefix.replace('_', ' ')} list empty. No export needed.")
+        return
+
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-
-    # Replace path separators with hyphens, remove colons, and replace spaces with hyphens
     safe_path = os.path.basename(source_dir).replace(":", "").replace(" ", "-")
+    file_name = f"{prefix}_{safe_path}_{timestamp}.txt"
 
-    file_name = f"subszero_{safe_path}_{timestamp}.txt"
+    try:
+        with open(file_name, "w") as f:
+            f.write("\n".join(file_list) + "\n")
+        print(f"Exported {prefix.replace('_', ' ')} to {file_name}")
+    except Exception as e:
+        print(f"Error exporting {prefix.replace('_', ' ')}: {e}")
+        if os.path.exists(file_name):  # Ensure a corrupted file isn't left behind
+            os.remove(file_name)
 
-    with open(file_name, "w") as f:
-        for vid in videos_without_subtitles:
-            f.write(vid + "\n")
+# Export based on conditions
+# Compute embedded subtitles list once to avoid redundant checks
+embedded_subtitles = [vid for vid in video_files if has_embedded_subtitles(vid)]
+all_subtitles_combined = subtitle_files + embedded_subtitles  # Merge subtitles (external + embedded)
 
-    print(f"Exported to {file_name}")
-else:
-    print("All videos have subtitles. No export needed.")
+# Define export conditions compactly
+export_items = [
+    (video_files, "all_videos", args.all_videos),
+    (subtitle_files, "all_subtitles", args.all_subtitles),
+    (embedded_subtitles, "all_embedded_subtitles", args.all_embedded),
+    (videos_without_subtitles, "no_subtitles", True),  # Always attempt to export if not empty
+]
+
+# Execute exports
+for file_list, prefix, condition in export_items:
+    if condition or args.everything:
+        export_file(file_list, prefix, source_dir)
 
 print("\nScript execution complete.")
-

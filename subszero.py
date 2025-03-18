@@ -6,8 +6,11 @@ import json
 import sys
 import datetime
 import argparse
+import time
 
-__version__ = "0.0.23"
+__version__ = "0.0.24"
+
+start_time = time.time() # Begin timer to track script completion
 
 # Set up argument parser
 parser = argparse.ArgumentParser(
@@ -142,7 +145,9 @@ video_basenames = {os.path.splitext(os.path.basename(video))[0].lower() for vide
 subtitle_basenames = [os.path.splitext(os.path.basename(sub))[0].lower() for sub in subtitle_files]
 
 # Find matching subtitles (allow exact matches and minor suffixes)
-subtitle_matches = {video for video in video_basenames if any(sub.startswith(video) for sub in subtitle_basenames)}
+subtitle_set = {sub for sub in subtitle_basenames} # Convert subtitle basenames to a set
+subtitle_matches = {video for video in video_basenames if any(sub.startswith(video) for sub in subtitle_set)}
+
 
 def has_embedded_subtitles(video_path):
     try:
@@ -165,41 +170,61 @@ else:
     video_iterator = video_files
 
 videos_without_subtitles = []
+total_videos = len(video_files)
+
+# Compute embedded subtitles list once to avoid redundant checks
+embedded_subtitles = [vid for vid in video_files if has_embedded_subtitles(vid)]
+
 for i, vid in enumerate(video_iterator, start=1):
+    # If tqdm is NOT available, show count + percentage
     if not use_tqdm:
-        sys.stdout.write(f"\rChecked {i}/{len(video_files)} videos...")
+        percentage = (i / total_videos) * 100
+        sys.stdout.write(f"\rChecking videos: {i}/{total_videos} ({percentage:.2f}%)")
         sys.stdout.flush()
 
     video_base = os.path.splitext(os.path.basename(vid))[0].lower()  # Convert video filename to lowercase
 
-    if video_base not in subtitle_matches and not has_embedded_subtitles(vid):
+    if video_base not in subtitle_matches and vid not in embedded_subtitles:
         videos_without_subtitles.append(vid)
 
-print("\nFiltering complete.")
-print(f"Total Videos Without Subtitles: {len(videos_without_subtitles)}")
+print("\n=== Filtering Complete ===")
+print(f"Total Videos Without Subtitles: {len(videos_without_subtitles)}\n")
 
 def export_file(file_list, prefix, source_dir):
     """Exports a list of files to a timestamped text file if the list is not empty."""
     if not file_list:
-        print(f"{prefix.replace('_', ' ')} list empty. No export needed.")
+        print(f"\n{prefix.replace('_', ' ')} list empty. No export needed.\n")
         return
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_path = os.path.basename(source_dir).replace(":", "").replace(" ", "-")
     file_name = f"{prefix}_{safe_path}_{timestamp}.txt"
 
+    print(f"\n--- Exporting {prefix.replace('_', ' ')} ---\n")  # Add a separator before exporting
+
     try:
         with open(file_name, "w") as f:
-            f.write("\n".join(file_list) + "\n")
-        print(f"Exported {prefix.replace('_', ' ')} to {file_name}")
+            total = len(file_list)
+
+            # Use tqdm if available, otherwise show progress manually
+            if use_tqdm:
+                for item in tqdm(file_list, desc=f"Exporting {prefix}", unit="item"):
+                    f.write(item + "\n")
+
+            else:
+                for i, item in enumerate(file_list, start=1):
+                    f.write(item + "\n")
+                    percentage = (i / total) * 100
+                    sys.stdout.write(f"\rExporting {prefix}: {i}/{total} files ({percentage:.2f}%)\n")
+                    sys.stdout.flush()
+
+        print(f"\nExported {prefix.replace('_', ' ')} to {file_name}\n")  # Add spacing after export
     except Exception as e:
-        print(f"Error exporting {prefix.replace('_', ' ')}: {e}")
-        if os.path.exists(file_name):  # Ensure a corrupted file isn't left behind
+        print(f"\nError exporting {prefix.replace('_', ' ')}: {e}\n")
+        if os.path.exists(file_name):
             os.remove(file_name)
 
 # Export based on conditions
-# Compute embedded subtitles list once to avoid redundant checks
-embedded_subtitles = [vid for vid in video_files if has_embedded_subtitles(vid)]
 all_subtitles_combined = subtitle_files + embedded_subtitles  # Merge subtitles (external + embedded)
 
 # Define export conditions compactly
@@ -215,4 +240,9 @@ for file_list, prefix, condition in export_items:
     if condition or args.everything:
         export_file(file_list, prefix, source_dir)
 
-print("\nScript execution complete.")
+elapsed_time = time.time() - start_time # Track time for script ending.
+formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time)) # Format time into a better format
+milliseconds = int((elapsed_time % 1) * 1000)
+
+print(f"\n=== Script Execution Complete ===")
+print(f"Total time elapsed: {formatted_time}.{milliseconds:03d} (hh:mm:ss.ms)\n")

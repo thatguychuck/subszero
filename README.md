@@ -3,7 +3,7 @@ A python command line script to scan for video files and attempt to check for a 
 
 ## Why?
 Personally, I was looking for an easy way to generate a txt file of videos without subtitles so I could feed it into [https://github.com/absadiki/subsai](https://github.com/absadiki/subsai), 
-which is a project that uses a local whisper/ai model to generate subtitles for videos.
+a project that uses a local whisper/ai model to generate subtitles for videos.
 
 ## Requirements:
 **python3** (this script was only tested on debian 12 bookworm).

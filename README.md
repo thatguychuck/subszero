@@ -1,5 +1,5 @@
 # subszero
-A python command line script to scan for video files and also attempts to check for a corresponding subtitle file, both external and embedded. By default a list of videos, not matched to a subtitle, is exported as a txt file. Other file lists can be exported using command line options.
+A python command line script to scan for video files that also attempts to check for a corresponding subtitle file, both external and embedded. By default a list of videos, not matched to a subtitle, is exported as a txt file. Other file lists can be exported using command line options.
 
 ## Why?
 Personally, I was looking for an easy way to generate a txt file of videos without subtitles so I could feed it into [https://github.com/absadiki/subsai](https://github.com/absadiki/subsai), 

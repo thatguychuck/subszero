@@ -19,7 +19,7 @@ so I put it here in case it can help someone else. The testing I did on my own r
 
 At any rate here are a few things of note:
 - No language detection. Only attempts to see if subtitles are present or not.
-- The subtitle files it searches for are hard coded and limited, see "usage" below for the list.
+- The external subtitle files for the search are hard coded and limited, see "usage" below for the list. However the script can be modified to search for others if needed.
 - Matching `awesome.video.mkv` to `awesome.video.srt` is relatively straight forward, but matching `awesome.video.mkv` to other conventions proved troublesome (`awesome.video.eng.srt`, `awesome.video.sdh.eng.srt`, or even `Awesome.Video.srt`). The logic in this script takes the video name without extention, and checks if the subtitle file contains that name with both sets switched to lower case. This proved accurate (as far as I can tell) in my own testing. However if there is a error in matching it is probably occuring here. 
 - Uses the file command to check mime type for "video" to find the video files.
 - ffprobe is used to check if subtitles are present in a video container.

@@ -25,7 +25,8 @@ At any rate here are a few things of note:
 - `ffprobe` is used to check if subtitles are present in a video container.
 
 ## Usage:
-**Scanning a large library can take some time, it is reccomended to test on smaller folders first and utilize screen or tmux**
+**Scanning a large library can take some time, it is reccomended to test on smaller folders first and utilize `screen` or `tmux`**
+
 `./subszero.py /path/to/media/files/`
 
 `./subszero.py -h` Will display the following:

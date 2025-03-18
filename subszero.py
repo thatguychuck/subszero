@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+import json
+import sys
+import datetime
+import argparse
+
+__version__ = "0.0.22"
+
+# Set up argument parser
+parser = argparse.ArgumentParser(
+    description=(
+        "Scans a directory and subdirectories for video files.\n"
+        "Attempts to match video files with subtitle files, and also checks for embedded subitiles.\n"
+        "A list of videos with no match are exported as a text file.\n\n"
+        "Requires: ffmpeg (uses ffprobe to check for embedded subtitles).\n"
+        "Optional: tqdm (for fancy progress bars, uses basic counter if not available).\n\n"
+        "Supported external subtitle formats:\n"
+        "- .srt (SubRip)\n"
+        "- .sub (MicroDVD)\n"
+        "- .vtt (WebVTT)\n"
+        "- .ass (Advanced SubStation Alpha)\n"
+        "- .ssa (SubStation Alpha)\n\n"
+        "The output file will be named based on the directory and timestamp."
+    ),
+    formatter_class=argparse.RawTextHelpFormatter  # Ensures newlines are preserved
+)
+parser.add_argument("source_directory", type=str, help="Path to the source directory")
+parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
+
+# Parse arguments
+args = parser.parse_args()
+
+# Normalize and clean the directory path
+source_dir = os.path.abspath(args.source_directory.strip())
+
+# Ensure the provided directory exists
+if not os.path.isdir(source_dir):
+    print(f"Error: The directory '{source_dir}' does not exist.")
+    sys.exit(1)
+
+# Ensure the script has read access to the directory
+if not os.access(source_dir, os.R_OK):
+    print(f"Error: No read access to the directory '{source_dir}'. Please check permissions.")
+    sys.exit(1)
+
+# Check write access to current directory to be able to export results
+if not os.access(os.getcwd(), os.W_OK):
+    print(f"Error: No write access to the current directory. Cannot export results. Exiting.")
+    sys.exit(1)
+
+# Try to import tqdm, set fallback mode if not installed
+try:
+    from tqdm import tqdm
+    use_tqdm = True
+except ImportError:
+    use_tqdm = False
+
+# Function to check if ffmpeg/ffprobe is installed
+def check_ffmpeg():
+    try:
+        subprocess.run(["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        subprocess.run(["ffprobe", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        return False
+
+# Ensure ffmpeg is installed before proceeding
+if not check_ffmpeg():
+    print("Error: ffmpeg/ffprobe is not installed or not in the system PATH.")
+    print("Please install ffmpeg before running this script.")
+    sys.exit(1)
+
+filetypes = ("video",)
+subtitle_types = (".srt", ".sub", ".vtt", ".ass", ".ssa")
+
+video_files = []
+subtitle_files = []
+
+print(f"\nScanning '{source_dir}' for video and subtitle files...")
+
+# Get all files for progress tracking
+all_files = [os.path.join(root, name) for root, _, files in os.walk(source_dir) for name in files]
+total_files = len(all_files)
+
+# Use tqdm if available, otherwise show progress on one line
+if use_tqdm:
+    file_iterator = tqdm(all_files, desc="Processing files", unit="file")
+else:
+    file_iterator = all_files
+
+# Scan for video and subtitle files
+for i, file in enumerate(file_iterator, start=1):
+    name = os.path.basename(file)
+
+    # Update single-line progress if tqdm is not available
+    if not use_tqdm:
+        sys.stdout.write(f"\rProcessed {i}/{total_files} files...")
+        sys.stdout.flush()
+
+    # Check if it's a subtitle file
+    if name.lower().endswith(subtitle_types):
+        subtitle_files.append(file)
+        continue
+
+    # Check if it's a video using MIME type
+    try:
+        ftype = subprocess.check_output(['file', '--mime-type', '-b', file]).decode('utf-8', errors='ignore').strip()
+        if ftype.split("/")[0] in filetypes:
+            video_files.append(file)
+    except subprocess.CalledProcessError:
+        print(f"\nError processing file: {file}")
+
+print("\nScanning complete.")
+print(f"Total Video Files Found: {len(video_files)}")
+print(f"Total Subtitle Files Found: {len(subtitle_files)}")
+
+# Normalize filenames (strip extensions, convert to lowercase)
+video_basenames = {os.path.splitext(os.path.basename(video))[0].lower() for video in video_files}
+subtitle_basenames = [os.path.splitext(os.path.basename(sub))[0].lower() for sub in subtitle_files]
+
+# Find matching subtitles (allow exact matches and minor suffixes)
+subtitle_matches = {video for video in video_basenames if any(sub.startswith(video) for sub in subtitle_basenames)}
+
+def has_embedded_subtitles(video_path):
+    try:
+        result = subprocess.run(
+            ['ffprobe', '-v', 'error', '-show_streams', '-print_format', 'json', video_path],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
+        )
+        streams = json.loads(result.stdout).get("streams", [])
+        return any(stream.get("codec_type") == "subtitle" for stream in streams)
+    except Exception as e:
+        print(f"\nError checking subtitles for {video_path}: {e}")
+        return False
+
+print("\nChecking for embedded subtitles...")
+
+# Use tqdm if available, otherwise show progress on one line
+if use_tqdm:
+    video_iterator = tqdm(video_files, desc="Checking videos", unit="video")
+else:
+    video_iterator = video_files
+
+videos_without_subtitles = []
+for i, vid in enumerate(video_iterator, start=1):
+    if not use_tqdm:
+        sys.stdout.write(f"\rChecked {i}/{len(video_files)} videos...")
+        sys.stdout.flush()
+
+    video_base = os.path.splitext(os.path.basename(vid))[0].lower()  # Convert video filename to lowercase
+
+    if video_base not in subtitle_matches and not has_embedded_subtitles(vid):
+        videos_without_subtitles.append(vid)
+
+print("\nFiltering complete.")
+print(f"Total Videos Without Subtitles: {len(videos_without_subtitles)}")
+
+if videos_without_subtitles:
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Replace path separators with hyphens, remove colons, and replace spaces with hyphens
+    safe_path = os.path.basename(source_dir).replace(":", "").replace(" ", "-")
+
+    file_name = f"subszero_{safe_path}_{timestamp}.txt"
+
+    with open(file_name, "w") as f:
+        for vid in videos_without_subtitles:
+            f.write(vid + "\n")
+
+    print(f"Exported to {file_name}")
+else:
+    print("All videos have subtitles. No export needed.")
+
+print("\nScript execution complete.")
+

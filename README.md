@@ -26,19 +26,22 @@ so I put it here in case it can help someone else.
 - Uses the `file` command to check mime type for "video" to find the video files.
 - `ffprobe` is used to check if subtitles are present in a video container.
 - **BLOAT:** As I am also using this as a learning exercise, this script conatins way more than it actually needs. The testing I did revealed many pitfalls that I tried to mitigate through checks and sanitizing of paths. As a result the script is overly complicated for what it does. Did I mention I am not really a programmer?
+  
 #### Performance
-This script was ran against a folder containing TV shows, file sizes varied from 100M to 4G, and produced the following results:
+This script was ran agains a 30TB(ish) collection of media, connected over SAMBA, and produced the following results. Smaller data sets do not take nearly as long.
 ```
 === Summary of Results ===
-Total Files Scanned: 58571
-Total Video Files Found: 10731
-Total Subtitle Files Found: 4930
-Total Videos with Embedded Subtitles: 4217
-Total Videos Without Subtitles: 2350
+Total Files Scanned: 156147
+Total Video Files Found: 19891
+Total Subtitle Files Found: 7969
+Total Videos with Embedded Subtitles: 6037
+Total Videos with Matching External Subtitles: 6464
+Total Videos with Subtitles (External + Embedded): 11965
+Total Videos Without Subtitles: 7926
 
 
 === Script Execution Complete ===
-Total time elapsed: 00:52:51.049 (hh:mm:ss.ms)
+Total time elapsed: 01:49:54.439 (hh:mm:ss.ms)
 ```
 
 ## Usage:

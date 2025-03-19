@@ -28,7 +28,7 @@ so I put it here in case it can help someone else.
 - **BLOAT:** As I am also using this as a learning exercise, this script conatins way more than it actually needs. The testing I did revealed many pitfalls that I tried to mitigate through checks and sanitizing of paths. As a result the script is overly complicated for what it does. Did I mention I am not really a programmer?
   
 #### Performance
-This script was ran agains a 30TB(ish) collection of media, in a virtual machine, connected to SAMBA via gigabit, and produced the following results. Smaller data sets do not take nearly as long. Your milage may vary.
+This script was ran against a 30TB(ish) collection of media, in a virtual machine, connected to SAMBA via gigabit, and produced the following results. Smaller data sets do not take nearly as long. Your milage may vary.
 ```
 === Summary of Results ===
 Total Files Scanned: 156147

@@ -8,7 +8,7 @@ import datetime
 import argparse
 import time
 
-__version__ = "0.0.26"
+__version__ = "0.0.27"
 
 start_time = time.time() # Begin timer to track script completion
 
@@ -40,7 +40,7 @@ export_options = [
     ("-r", "--reverse", "Also export a list of video files that have subtitles or embedded subtitles, if any."),
     ("-a", "--all-videos", "Also export a list of all video files found, if any."),
     ("-s", "--all-subtitles", "Also export a list of all subtitle files found, if any."),
-    ("-m", "--all-embedded", "Also export a list of all videos with embedded subtitles."),
+    ("-m", "--all-embedded", "Also export a list of all videos with embedded subtitles, if any"),
     ("-e", "--everything", "Enable all export options."),
 ]
 
@@ -108,34 +108,36 @@ print(f"\nScanning '{source_dir}' for video and subtitle files...")
 all_files = [os.path.join(root, name) for root, _, files in os.walk(source_dir) for name in files]
 total_files = len(all_files)
 
-# Use tqdm if available, otherwise show progress on one line
-if use_tqdm:
-    file_iterator = tqdm(all_files, desc="Processing files", unit="file")
-else:
-    file_iterator = all_files
-
 # Scan for video and subtitle files
-for i, file in enumerate(file_iterator, start=1):
-    name = os.path.basename(file)
+if not all_files:
+    print("\n[Warning]: No files found in the directory! Please check the path.\n")
+else:
+    if use_tqdm:
+            file_iterator = tqdm(all_files, desc="Processing files", unit="file")
+    else:
+        file_iterator = all_files
 
-    # Update single-line progress if tqdm is not available
-    if not use_tqdm:
-        percentage = (i / total_files) * 100
-        sys.stdout.write(f"\rProcessed {i}/{total_files} files ({percentage:.2f}%)")
-        sys.stdout.flush()
+    for i, file in enumerate(file_iterator, start=1):
+        name = os.path.basename(file)
 
-    # Check if it's a subtitle file
-    if name.lower().endswith(subtitle_types):
-        subtitle_files.append(file)
-        continue
+        # Update single-line progress if tqdm is not available
+        if not use_tqdm:
+            percentage = (i / total_files) * 100
+            sys.stdout.write(f"\rProcessed {i}/{total_files} files ({percentage:.2f}%)")
+            sys.stdout.flush()
 
-    # Check if it's a video using MIME type
-    try:
-        ftype = subprocess.check_output(['file', '--mime-type', '-b', file]).decode('utf-8', errors='ignore').strip()
-        if ftype.split("/")[0] in filetypes:
-            video_files.append(file)
-    except subprocess.CalledProcessError:
-        print(f"\nError processing file: {file}")
+        # Check if it's a subtitle file
+        if name.lower().endswith(subtitle_types):
+            subtitle_files.append(file)
+            continue
+
+        # Check if it's a video using MIME type
+        try:
+            ftype = subprocess.check_output(['file', '--mime-type', '-b', file]).decode('utf-8', errors='ignore').strip()
+            if ftype.split("/")[0] in filetypes:
+                video_files.append(file)
+        except subprocess.CalledProcessError:
+            print(f"\nError processing file: {file}")
 
 print("\nScanning complete.")
 print(f"Total Video Files Found: {len(video_files)}")
@@ -172,57 +174,49 @@ print("\nChecking for embedded subtitles and filtering videos without subtitles.
 videos_without_subtitles = []
 embedded_subtitles = []
 
-# Define video_iterator properly
-if use_tqdm:
-    video_iterator = tqdm(video_files, desc="Checking videos", unit="video")
+# Define video_iterator
+if not video_files:
+    print("\n[Warning]: No video files found in the directory! Please check the path.\n")
 else:
-    video_iterator = video_files
+    if use_tqdm:
+        video_iterator = tqdm(video_files, desc="Checking videos", unit="video")
+    else:
+        video_iterator = video_files
 
-for index, vid in enumerate(video_iterator, start=1):
-    has_embedded = has_embedded_subtitles(vid)
-    if has_embedded:
-        embedded_subtitles.append(vid)
+    for index, vid in enumerate(video_iterator, start=1):
+        has_embedded = has_embedded_subtitles(vid)
+        if has_embedded:
+            embedded_subtitles.append(vid)
 
-    video_base = os.path.splitext(os.path.basename(vid))[0].lower()
-    if video_base not in subtitle_matches and vid not in embedded_subtitles:
-        videos_without_subtitles.append(vid)
+        video_base = os.path.splitext(os.path.basename(vid))[0].lower()
+        if video_base not in subtitle_matches and vid not in embedded_subtitles:
+            videos_without_subtitles.append(vid)
 
-    if not use_tqdm:
-        percentage = (index / total_videos) * 100
-        sys.stdout.write(f"\rChecking videos: {index}/{total_videos} ({percentage:.2f}%)")
-        sys.stdout.flush()
+        if not use_tqdm:
+            percentage = (index / total_videos) * 100
+            sys.stdout.write(f"\rChecking videos: {index}/{total_videos} ({percentage:.2f}%)")
+            sys.stdout.flush()
 
-print("\nEmbedded subtitle check and filtering complete.")
+print("\nEmbedded subtitle check and filtering complete.\n")
+print("Generating file exports...\n")
 
 def export_file(file_list, prefix, source_dir):
     """Exports a list of files to a timestamped text file if the list is not empty."""
     if not file_list:
-        print(f"\n{prefix.replace('_', ' ')} list empty. No export needed.\n")
+        print(f"\n{prefix.replace('_', ' ')} list empty. No export needed.")
         return
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_path = os.path.basename(source_dir).replace(":", "").replace(" ", "-")
     file_name = f"{prefix}_{safe_path}_{timestamp}.txt"
 
-    print(f"\n--- Exporting {prefix.replace('_', ' ')} ---\n")  # Add a separator before exporting
+    print(f"\n--- Exporting {prefix.replace('_', ' ')} ---")
 
     try:
         with open(file_name, "w") as f:
             total = len(file_list)
 
-            # Use tqdm if available, otherwise show progress manually
-            if use_tqdm:
-                for item in tqdm(file_list, desc=f"Exporting {prefix}", unit="item"):
-                    f.write(item + "\n")
-
-            else:
-                for i, item in enumerate(file_list, start=1):
-                    f.write(item + "\n")
-                    percentage = (i / total) * 100
-                    sys.stdout.write(f"\rExporting {prefix}: {i}/{total} files ({percentage:.2f}%)")
-                    sys.stdout.flush()
-
-        print(f"\nExported {prefix.replace('_', ' ')} to {file_name}\n")  # Add spacing after export
+        print(f"Exported {prefix.replace('_', ' ')} to {file_name}")
     except Exception as e:
         print(f"\nError exporting {prefix.replace('_', ' ')}: {e}\n")
         if os.path.exists(file_name):

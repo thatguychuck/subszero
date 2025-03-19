@@ -8,7 +8,7 @@ import datetime
 import argparse
 import time
 
-__version__ = "0.0.25"
+__version__ = "0.0.26"
 
 start_time = time.time() # Begin timer to track script completion
 
@@ -120,7 +120,8 @@ for i, file in enumerate(file_iterator, start=1):
 
     # Update single-line progress if tqdm is not available
     if not use_tqdm:
-        sys.stdout.write(f"\rProcessed {i}/{total_files} files...")
+        percentage = (i / total_files) * 100
+        sys.stdout.write(f"\rProcessed {i}/{total_files} files ({percentage:.2f}%)")
         sys.stdout.flush()
 
     # Check if it's a subtitle file
@@ -177,7 +178,7 @@ if use_tqdm:
 else:
     video_iterator = video_files
 
-for vid in video_iterator:
+for index, vid in enumerate(video_iterator, start=1):
     has_embedded = has_embedded_subtitles(vid)
     if has_embedded:
         embedded_subtitles.append(vid)
@@ -187,8 +188,8 @@ for vid in video_iterator:
         videos_without_subtitles.append(vid)
 
     if not use_tqdm:
-        percentage = (i / total_videos) * 100
-        sys.stdout.write(f"\rChecking videos: {i}/{total_videos} ({percentage:.2f}%)")
+        percentage = (index / total_videos) * 100
+        sys.stdout.write(f"\rChecking videos: {index}/{total_videos} ({percentage:.2f}%)")
         sys.stdout.flush()
 
 print("\nEmbedded subtitle check and filtering complete.")
@@ -247,11 +248,23 @@ elapsed_time = time.time() - start_time # Track time for script ending.
 formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time)) # Format time into a better format
 milliseconds = int((elapsed_time % 1) * 1000)
 
+# Determine videos with external subtitles by matching video base names with subtitle_matches.
+videos_with_external_subtitles = [
+    vid for vid in video_files
+    if os.path.splitext(os.path.basename(vid))[0].lower() in subtitle_matches
+]
+
+# Combine external and embedded subtitle videos ensuring each video is only counted once.
+videos_with_subtitles = set(videos_with_external_subtitles) | set(embedded_subtitles)
+total_videos_with_subtitles = len(videos_with_subtitles)
+
 print("\n=== Summary of Results ===")
 print(f"Total Files Scanned: {total_files}")
 print(f"Total Video Files Found: {len(video_files)}")
 print(f"Total Subtitle Files Found: {len(subtitle_files)}")
 print(f"Total Videos with Embedded Subtitles: {len(embedded_subtitles)}")
+print(f"Total Videos with Matching External Subtitles: {len(subtitle_matches)}")
+print(f"Total Videos with Subtitles (External + Embedded): {total_videos_with_subtitles}")
 print(f"Total Videos Without Subtitles: {len(videos_without_subtitles)}\n")
 print(f"\n=== Script Execution Complete ===")
 print(f"Total time elapsed: {formatted_time}.{milliseconds:03d} (hh:mm:ss.ms)\n")

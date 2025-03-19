@@ -8,7 +8,7 @@ import datetime
 import argparse
 import time
 
-__version__ = "0.0.24"
+__version__ = "0.0.25"
 
 start_time = time.time() # Begin timer to track script completion
 
@@ -16,7 +16,7 @@ start_time = time.time() # Begin timer to track script completion
 parser = argparse.ArgumentParser(
     description=(
         "Scans a directory and subdirectories for video files.\n"
-        "Attempts to match video files with subtitle files, and also checks for embedded subitiles.\n"
+        "Attempts to match video files with subtitle files, and also checks for embedded subtitles.\n"
         "A list of videos with no match are exported as a text file.\n\n"
         "Requires: ffmpeg (uses ffprobe to check for embedded subtitles).\n"
         "Optional: tqdm (for fancy progress bars, uses basic counter if not available).\n\n"
@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser(
 )
 # Required arguments
 parser.add_argument("source_directory", type=str, help="Path to the source directory")
-# Optional aruguments
+# Optional arguments
 parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
 
 # Define export options separately
@@ -161,34 +161,37 @@ def has_embedded_subtitles(video_path):
         print(f"\nError checking subtitles for {video_path}: {e}")
         return False
 
-print("\nChecking for embedded subtitles...")
+videos_without_subtitles = []
+total_videos = len(video_files)
 
-# Use tqdm if available, otherwise show progress on one line
+embedded_subtitles = []
+
+print("\nChecking for embedded subtitles and filtering videos without subtitles...")
+
+videos_without_subtitles = []
+embedded_subtitles = []
+
+# Define video_iterator properly
 if use_tqdm:
     video_iterator = tqdm(video_files, desc="Checking videos", unit="video")
 else:
     video_iterator = video_files
 
-videos_without_subtitles = []
-total_videos = len(video_files)
+for vid in video_iterator:
+    has_embedded = has_embedded_subtitles(vid)
+    if has_embedded:
+        embedded_subtitles.append(vid)
 
-# Compute embedded subtitles list once to avoid redundant checks
-embedded_subtitles = [vid for vid in video_files if has_embedded_subtitles(vid)]
+    video_base = os.path.splitext(os.path.basename(vid))[0].lower()
+    if video_base not in subtitle_matches and vid not in embedded_subtitles:
+        videos_without_subtitles.append(vid)
 
-for i, vid in enumerate(video_iterator, start=1):
-    # If tqdm is NOT available, show count + percentage
     if not use_tqdm:
         percentage = (i / total_videos) * 100
         sys.stdout.write(f"\rChecking videos: {i}/{total_videos} ({percentage:.2f}%)")
         sys.stdout.flush()
 
-    video_base = os.path.splitext(os.path.basename(vid))[0].lower()  # Convert video filename to lowercase
-
-    if video_base not in subtitle_matches and vid not in embedded_subtitles:
-        videos_without_subtitles.append(vid)
-
-print("\n=== Filtering Complete ===")
-print(f"Total Videos Without Subtitles: {len(videos_without_subtitles)}\n")
+print("\nEmbedded subtitle check and filtering complete.")
 
 def export_file(file_list, prefix, source_dir):
     """Exports a list of files to a timestamped text file if the list is not empty."""
@@ -215,7 +218,7 @@ def export_file(file_list, prefix, source_dir):
                 for i, item in enumerate(file_list, start=1):
                     f.write(item + "\n")
                     percentage = (i / total) * 100
-                    sys.stdout.write(f"\rExporting {prefix}: {i}/{total} files ({percentage:.2f}%)\n")
+                    sys.stdout.write(f"\rExporting {prefix}: {i}/{total} files ({percentage:.2f}%)")
                     sys.stdout.flush()
 
         print(f"\nExported {prefix.replace('_', ' ')} to {file_name}\n")  # Add spacing after export
@@ -244,5 +247,11 @@ elapsed_time = time.time() - start_time # Track time for script ending.
 formatted_time = time.strftime("%H:%M:%S", time.gmtime(elapsed_time)) # Format time into a better format
 milliseconds = int((elapsed_time % 1) * 1000)
 
+print("\n=== Summary of Results ===")
+print(f"Total Files Scanned: {total_files}")
+print(f"Total Video Files Found: {len(video_files)}")
+print(f"Total Subtitle Files Found: {len(subtitle_files)}")
+print(f"Total Videos with Embedded Subtitles: {len(embedded_subtitles)}")
+print(f"Total Videos Without Subtitles: {len(videos_without_subtitles)}\n")
 print(f"\n=== Script Execution Complete ===")
 print(f"Total time elapsed: {formatted_time}.{milliseconds:03d} (hh:mm:ss.ms)\n")

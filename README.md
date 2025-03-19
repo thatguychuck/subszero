@@ -26,7 +26,20 @@ so I put it here in case it can help someone else.
 - Uses the `file` command to check mime type for "video" to find the video files.
 - `ffprobe` is used to check if subtitles are present in a video container.
 - **BLOAT:** As I am also using this as a learning exercise, this script conatins way more than it actually needs. The testing I did revealed many pitfalls that I tried to mitigate through checks and sanitizing of paths. As a result the script is overly complicated for what it does. Did I mention I am not really a programmer?
+#### Performance
+This script was ran against a folder containing TV shows, file sizes varied from 100M to 4G, and produced the following results:
+```
+=== Summary of Results ===
+Total Files Scanned: 58571
+Total Video Files Found: 10731
+Total Subtitle Files Found: 4930
+Total Videos with Embedded Subtitles: 4217
+Total Videos Without Subtitles: 2350
 
+
+=== Script Execution Complete ===
+Total time elapsed: 00:52:51.049 (hh:mm:ss.ms)
+```
 
 ## Usage:
 **Scanning a large library can take some time, it is recomended to test on smaller folders first and utilize `screen` or `tmux`**

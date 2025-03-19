@@ -78,7 +78,7 @@ options:
   -r, --reverse        Also export a list of video files that have subtitles or embedded subtitles, if any.
   -a, --all-videos     Also export a list of all video files found, if any.
   -s, --all-subtitles  Also export a list of all subtitle files found, if any.
-  -m, --all-embedded   Also export a list of all videos with embedded subtitles.
+  -m, --all-embedded   Also export a list of all videos with embedded subtitles, if any.
   -e, --everything     Enable all export options.
 
 

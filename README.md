@@ -18,13 +18,14 @@ a project that uses a local whisper/ai model to generate subtitles for videos.
 so I put it here in case it can help someone else. 
 
 #### At any rate here are a few things of note:
+- Currently, nothing is optomized as far as parallelization, it's slower than it probably could be. Did I mention I am not really a programmer?
 - No language detection. Only attempts to see if subtitles are present or not.
 - No detection of "burned in" subtitles which are present in the video images themselves.
 - The external subtitle files for the search are hard coded and limited, see "usage" below for the list. However the script can be modified to search for others if needed.
 - Matching `awesome.video.mkv` to `awesome.video.srt` is relatively straight forward, but matching `awesome.video.mkv` to other conventions proved troublesome (`awesome.video.eng.srt`, `awesome.video.sdh.eng.srt`, or even `Awesome.Video.srt`). The logic in this script takes the video name without extention, and checks if the subtitle name contains the video name, with both sets switched to lower case. This proved accurate (as far as I can tell) in my own testing. However if there is a error in matching it is probably occurring here. 
 - Uses the `file` command to check mime type for "video" to find the video files.
 - `ffprobe` is used to check if subtitles are present in a video container.
-- **BLOAT:** As I am also using this as a learning exercise, this script conatins way more than it actually needs. The testing I did revealed many pitfalls that I tried to mitigate through checks and sanitizing of paths. As a result the script seems overly complicated for what it does. 
+- **BLOAT:** As I am also using this as a learning exercise, this script conatins way more than it actually needs. The testing I did revealed many pitfalls that I tried to mitigate through checks and sanitizing of paths. As a result the script is overly complicated for what it does. Did I mention I am not really a programmer?
 
 
 ## Usage:

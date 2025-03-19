@@ -8,7 +8,7 @@ import datetime
 import argparse
 import time
 
-__version__ = "0.0.27"
+__version__ = "0.0.28"
 
 start_time = time.time() # Begin timer to track script completion
 
@@ -166,13 +166,9 @@ def has_embedded_subtitles(video_path):
 
 videos_without_subtitles = []
 total_videos = len(video_files)
-
 embedded_subtitles = []
 
 print("\nChecking for embedded subtitles and filtering videos without subtitles...")
-
-videos_without_subtitles = []
-embedded_subtitles = []
 
 # Define video_iterator
 if not video_files:
@@ -214,7 +210,8 @@ def export_file(file_list, prefix, source_dir):
 
     try:
         with open(file_name, "w") as f:
-            total = len(file_list)
+            for item in file_list:
+                f.write(item + "\n")
 
         print(f"Exported {prefix.replace('_', ' ')} to {file_name}")
     except Exception as e:

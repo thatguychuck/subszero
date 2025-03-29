@@ -6,7 +6,9 @@ Personally, I was looking for an easy way to generate a txt file of videos witho
 a project that uses a local whisper/ai model to generate subtitles for videos.
 
 ## Requirements:
-**python3** (this script was only tested on debian 12 bookworm).
+**python3** (this script was only tested on debian 12 bookworm, windows not tested).
+
+**file** for checking mimetype. Standard on many linux distrobutions.
 
 **ffmpeg** as this script calls ffprobe to check for embedded subtitles.
 
